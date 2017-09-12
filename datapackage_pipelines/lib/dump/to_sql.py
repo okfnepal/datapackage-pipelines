@@ -87,7 +87,7 @@ class SQLDumper(DumperBase):
                                    self.normalise_schema_for_engine(self.engine.dialect.name,
                                                                     spec['schema']))
                 except ValidationError as e:
-                    logging.error('Error validating schema %r', spec['schema'])
+                    logging.exception('Error validating schema %r', spec['schema'])
                     for err in e.errors:
                         logging.error('Error validating schema: %s', err)
                     raise
