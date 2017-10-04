@@ -119,9 +119,12 @@ class PipelineStatus(object):
             return 'INVALID'
         last_execution = self.get_last_execution()
         if last_execution is None:
-            return 'REGISTERED'
-        if last_execution.success is None and last_execution.start_time is not None:
-            return 'RUNNING'
+            return 'INIT'
+        if last_execution.success is None:
+            if last_execution.start_time is None:
+                return 'QUEUED'
+            else:
+                return 'RUNNING'
         if last_execution.success:
             return 'SUCCEEDED'
         else:

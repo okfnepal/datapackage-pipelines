@@ -102,7 +102,7 @@ def main():
             'dirty': pipeline_status.dirty(),
             'runnable': pipeline_status.runnable(),
             'class': {'INIT': 'primary',
-                      'REGISTERED': 'primary',
+                      'QUEUED': 'primary',
                       'INVALID': 'danger',
                       'RUNNING': 'warning',
                       'SUCCEEDED': 'success',
@@ -120,10 +120,11 @@ def main():
     def state_or_dirty(state, p):
         return p.get('state') == state or p.get('dirty')
 
+    logging.info('%r', statuses[1])
     categories = [
         ['ALL', 'All Pipelines', lambda _, __: True],
         ['INVALID', "Can't start", lambda _, p: not p['runnable']],
-        ['REGISTERED', 'Waiting to run', lambda state, p: (p['runnable'] and (p['state'] == state or p['dirty']))],
+        ['QUEUED', 'Waiting to run', lambda state, p: p['state'] == state],
         ['RUNNING', 'Running', state_and_not_dirty],
         ['FAILED', 'Failed Execution', state_and_not_dirty],
         ['SUCCEEDED', 'Successful Execution', state_and_not_dirty],

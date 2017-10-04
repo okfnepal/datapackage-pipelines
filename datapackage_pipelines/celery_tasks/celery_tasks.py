@@ -112,10 +112,12 @@ def update_pipelines(action, completed_pipeline_id, completed_trigger):
                 logging.info("DEPENDENT Pipeline: %s (%d errors) (from ...%s)",
                              spec.pipeline_id, len(spec.validation_errors), os.path.basename(completed_pipeline_id))
 
+        psle = ps.get_last_execution()
+        last_successful = psle.success is True if psle is not None else False
         if ps.runnable() and \
                     (ps.dirty() or
                      (completed_trigger=='scheduled') or
-                     (action=='init' and ps.state() == 'FAILED')):
+                     (action=='init' and not last_successful)):
             queued = queue_pipeline(spec, 'dirty-task-%s' % action if completed_trigger is None else completed_trigger)
             if queued:
                 executed_count += 1
