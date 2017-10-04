@@ -202,14 +202,14 @@ async def async_execute_pipeline(pipeline_id,
 
     ps = status.get(pipeline_id)
     if not ps.start_execution(execution_id):
-        logging.info("START EXECUTION FAILED %s, BAILING OUT", pipeline_id)
+        logging.info("%s START EXECUTION FAILED %s, BAILING OUT", execution_id[:8], pipeline_id)
         return False, {}, []
 
     debug = trigger == 'manual'
 
     ps.update_execution(execution_id, '')
 
-    logging.info("RUNNING %s", pipeline_id)
+    logging.info("%s RUNNING %s", execution_id[:8], pipeline_id)
 
     if use_cache:
         pipeline_steps = find_caches(pipeline_steps, pipeline_cwd)
@@ -248,18 +248,21 @@ async def async_execute_pipeline(pipeline_id,
             process, return_code = waiter.result()
             if return_code == 0:
                 if debug:
-                    logging.info("DONE %s", process.args)
+                    logging.info("%s DONE %s", execution_id[:8], process.args)
                 processes = [p for p in processes if p.pid != process.pid]
             else:
                 if return_code > 0 and failed_index is None:
                     failed_index = index_for_pid[process.pid]
                 if debug:
-                    logging.error("FAILED %s: %s", process.args, return_code)
+                    logging.error("%s FAILED %s: %s", execution_id[:8], process.args, return_code)
                 success = False
                 kill_all_processes()
 
-        ps.update_execution(execution_id,
-                            '\n'.join(execution_log))
+        if not ps.update_execution(execution_id,
+                                   '\n'.join(execution_log)):
+            logging.error("%s FAILED to update %s", execution_id[:8], pipeline_id)
+            success = False
+            kill_all_processes()
 
     stats, error_log = await stop_error_collecting(failed_index)
     if success is False:

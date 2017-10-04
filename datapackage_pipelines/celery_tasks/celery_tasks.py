@@ -34,8 +34,8 @@ def queue_pipeline(spec: PipelineSpec, trigger):
             spec.validation_errors,
             spec.cache_hash)
     if ps.runnable():
-        logging.info('Executing %s task %s', trigger.upper(), spec.pipeline_id)
         eid = gen_execution_id()
+        logging.info('%s QUEUEING %s task %s', eid[:8], trigger.upper(), spec.pipeline_id)
         ps.queue_execution(eid, trigger)
         execute_pipeline_task.delay(spec.pipeline_id,
                                     spec.pipeline_details,

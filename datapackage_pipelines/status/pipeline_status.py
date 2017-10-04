@@ -90,11 +90,11 @@ class PipelineStatus(object):
 
     def validate_execution_id(self, execution_id):
         if len(self.executions) == 0:
-            logging.debug('NO EXISTING EXECUTIONS')
+            logging.info('%s NO EXISTING EXECUTIONS', execution_id[:8])
             return False
         first = self.executions[0].execution_id
         if first != execution_id:
-            logging.debug('EXECUTION ID MISMATCH (%s != %s)', first, execution_id)
+            logging.info('%s EXECUTION ID MISMATCH (first: %s)', execution_id[:8], first)
             return False
         return True
 
@@ -105,11 +105,13 @@ class PipelineStatus(object):
 
     def finish_execution(self, execution_id, success, stats, error_log):
         if self.validate_execution_id(execution_id):
-            self.executions[0].finish_execution(success, stats, error_log)
+            return self.executions[0].finish_execution(success, stats, error_log)
+        return False
 
     def update_execution(self, execution_id, log):
         if self.validate_execution_id(execution_id):
-            self.executions[0].update_execution(log)
+            return self.executions[0].update_execution(log)
+        return False
 
     def deregister(self):
         self.backend.deregister_pipeline_id(self.pipeline_id)
