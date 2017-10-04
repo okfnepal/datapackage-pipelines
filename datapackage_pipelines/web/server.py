@@ -62,6 +62,15 @@ def make_hierarchies(statuses):
                 del children_[k]
         return children_
 
+    statuses = [
+       {
+            'id': st['id'].split('/'),
+            'title': st.get('title'),
+            'stats': st.get('stats'),
+            'slug': st.get('slug')
+       }
+       for st in statuses
+   ]
     groups = group(statuses)
     children = groups.get('children', {})
     groups['children'] = flatten(children)
@@ -81,15 +90,17 @@ def main():
         ex = pipeline_status.get_last_execution()
         success_ex = pipeline_status.get_last_successful_execution()
         pipeline_obj = {
-            'id': pipeline_id.lstrip('./').split('/'),
+            'id': pipeline_id.lstrip('./'),
             'title': pipeline_status.pipeline_details.get('title'),
             'stats': ex.stats if ex else None,
             'slug': slugify.slugify(pipeline_id),
             'trigger': ex.trigger if ex else None,
+            'error_log': pipeline_status.errors(),
             'state': pipeline_status.state(),
             'pipeline': pipeline_status.pipeline_details,
             'message': pipeline_status.state().capitalize(),
             'dirty': pipeline_status.dirty(),
+            'runnable': pipeline_status.runnable(),
             'class': {'INIT': 'primary',
                       'REGISTERED': 'primary',
                       'INVALID': 'danger',
@@ -103,7 +114,6 @@ def main():
         }
         statuses.append(pipeline_obj)
 
-    print(statuses[0])
     def state_and_not_dirty(state, p):
         return p.get('state') == state and not p.get('dirty')
 
@@ -112,8 +122,8 @@ def main():
 
     categories = [
         ['ALL', 'All Pipelines', lambda _, __: True],
-        ['INVALID', "Can't start", state_and_not_dirty],
-        ['REGISTERED', 'Waiting to run', state_or_dirty],
+        ['INVALID', "Can't start", lambda _, p: not p['runnable']],
+        ['REGISTERED', 'Waiting to run', lambda state, p: (p['runnable'] and (p['state'] == state or p['dirty']))],
         ['RUNNING', 'Running', state_and_not_dirty],
         ['FAILED', 'Failed Execution', state_and_not_dirty],
         ['SUCCEEDED', 'Successful Execution', state_and_not_dirty],
@@ -147,7 +157,7 @@ def pipeline_raw_api(pipeline_id):
         "started": last_execution.start_time if last_execution else None,
         "ended": last_execution.finish_time if last_execution else None,
         "reason": last_execution.log if last_execution else None,
-        "error_log": last_execution.error_log if last_execution else [],
+        "error_log": pipeline_status.errors(),
         "stats": last_execution.stats if last_execution else None,
         "success": last_execution.success if last_execution else None,
         "last_success": last_successful_execution.finish_time if last_successful_execution else None,
@@ -159,7 +169,7 @@ def pipeline_raw_api(pipeline_id):
         "state": pipeline_status.state(),
     }
 
-    return jsonify(pipeline_status)
+    return jsonify(ret)
 
 
 @blueprint.route("api/<field>/<path:pipeline_id>")

@@ -50,6 +50,16 @@ class PipelineStatus(object):
     def dirty(self):
         return len(self.executions) == 0 or self.cache_hash != self.executions[0].cache_hash
 
+    def errors(self):
+        if not self.runnable():
+            return ['%s :%s' % tuple(err)
+                    for err in self.validation_errors]
+        else:
+            ex = self.get_last_execution()
+            if ex is not None:
+                return ex.error_log
+        return []
+
     def runnable(self):
         return len(self.validation_errors) == 0
 
@@ -110,7 +120,7 @@ class PipelineStatus(object):
         last_execution = self.get_last_execution()
         if last_execution is None:
             return 'REGISTERED'
-        if last_execution.success is None:
+        if last_execution.success is None and last_execution.start_time is not None:
             return 'RUNNING'
         if last_execution.success:
             return 'SUCCEEDED'
