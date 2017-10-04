@@ -4,8 +4,8 @@ import os
 from concurrent.futures import CancelledError
 from json.decoder import JSONDecodeError
 
-from datapackage_pipelines.specs.specs import resolve_executor
-from datapackage_pipelines.status import status
+from ..specs.specs import resolve_executor
+from ..status import status
 from ..utilities.extended_json import json
 
 from .runners import runner_config
@@ -197,15 +197,17 @@ async def async_execute_pipeline(pipeline_id,
                                  pipeline_steps,
                                  pipeline_cwd,
                                  trigger,
+                                 execution_id,
                                  use_cache):
 
-    if status.is_running(pipeline_id):
-        logging.info("ALREADY RUNNING %s, BAILING OUT", pipeline_id)
+    ps = status.get(pipeline_id)
+    if not ps.start_execution(execution_id):
+        logging.info("START EXECUTION FAILED %s, BAILING OUT", pipeline_id)
         return False, {}, []
 
     debug = trigger == 'manual'
 
-    status.running(pipeline_id, trigger, '')
+    ps.update_execution(execution_id, '')
 
     logging.info("RUNNING %s", pipeline_id)
 
@@ -256,29 +258,23 @@ async def async_execute_pipeline(pipeline_id,
                 success = False
                 kill_all_processes()
 
-        status.running(pipeline_id,
-                       trigger,
-                       '\n'.join(execution_log))
+        ps.update_execution(execution_id,
+                            '\n'.join(execution_log))
 
     stats, error_log = await stop_error_collecting(failed_index)
     if success is False:
         stats = None
 
-    cache_hash = ''
-    if len(pipeline_steps) > 0:
-        cache_hash = pipeline_steps[-1]['_cache_hash']
+    ps.update_execution(execution_id, '\n'.join(execution_log))
+    ps.finish_execution(execution_id, success, stats, error_log)
 
-    status.idle(pipeline_id,
-                success,
-                '\n'.join(execution_log),
-                cache_hash,
-                stats,
-                error_log)
+    logging.info("DONE %s %s", 'V' if success else 'X', pipeline_id)
 
     return success, stats, error_log
 
 
 def execute_pipeline(spec,
+                     execution_id,
                      trigger='manual',
                      use_cache=True):
 
@@ -289,6 +285,7 @@ def execute_pipeline(spec,
                                                      spec.pipeline_details.get('pipeline', []),
                                                      spec.path,
                                                      trigger,
+                                                     execution_id,
                                                      use_cache))
     try:
         return loop.run_until_complete(pipeline_task)
