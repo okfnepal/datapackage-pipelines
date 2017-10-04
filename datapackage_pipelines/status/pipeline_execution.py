@@ -93,6 +93,7 @@ class PipelineExecution(object):
             return False
         self.log = log
         self.__save()
+        return True
 
     def invalidate(self):
         now = time.time()

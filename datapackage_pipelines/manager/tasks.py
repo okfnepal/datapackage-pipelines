@@ -258,7 +258,7 @@ async def async_execute_pipeline(pipeline_id,
                 success = False
                 kill_all_processes()
 
-        if not ps.update_execution(execution_id,
+        if success and not ps.update_execution(execution_id,
                                    '\n'.join(execution_log)):
             logging.error("%s FAILED to update %s", execution_id[:8], pipeline_id)
             success = False
